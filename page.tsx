@@ -629,4 +629,3 @@ export default function WireMotionFlipbook() {
     </div>
   );
 }
-我如何让不会代码的人使用这份web工具
