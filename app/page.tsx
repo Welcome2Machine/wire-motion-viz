@@ -253,6 +253,11 @@ export default function WireMotionFlipbook() {
     const arrayBuf = await file.arrayBuffer();
     const wbLocal = XLSX.read(arrayBuf, { type: 'array' });
     setWb(wbLocal);
+    processWorkbook(wbLocal);
+  }
+
+  // Shared workbook processing so we can reuse for uploaded files or server-provided file
+  function processWorkbook(wbLocal: XLSX.WorkBook) {
     const perStepAll = coerceRows(toArray(getSheet(wbLocal, 'per_step_all')));
     const grouped: Record<string, SeriesRow[]> = {};
     for (const P of POINTS) {
@@ -266,6 +271,28 @@ export default function WireMotionFlipbook() {
     }
     setPointSeries(grouped);
   }
+
+  // Try to auto-load the default workbook from the server on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function tryLoadDefault() {
+      try {
+        const res = await fetch('/api/processed-data');
+        if (!res.ok) return;
+        const buf = await res.arrayBuffer();
+        if (cancelled) return;
+        const wbLocal = XLSX.read(buf, { type: 'array' });
+        setWb(wbLocal);
+        processWorkbook(wbLocal);
+      } catch (e) {
+        // ignore - user can still upload manually
+      }
+    }
+    tryLoadDefault();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function triggerFile() {
     inputRef.current?.click();
